@@ -140,6 +140,15 @@ details.fmt pre{margin:10px 0 0;font:.85rem/1.5 var(--font-script);white-space:p
 .ib{width:44px;height:44px;border:1px solid var(--line);border-radius:50%;background:var(--bg);cursor:pointer;display:grid;place-items:center}
 .ib.big{width:52px;height:52px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .ib:hover{border-color:var(--accent)}
+.status #st-text{flex:1}
+.ib.sm{width:36px;height:36px}
+.player.folded{flex-direction:row;align-items:center;gap:8px;padding:6px 8px}
+.player.folded .status{flex:1;min-width:0;min-height:0;gap:6px}
+.player.folded #st-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem}
+.player.folded .prow{flex:0 0 auto;flex-wrap:nowrap}
+.player.folded .seg,.player.folded #btn-mine{display:none}
+.player.folded .ib{width:38px;height:38px}
+.player.folded .ib.big{width:42px;height:42px}  
 @media (prefers-reduced-motion:no-preference){.sp.now{transition:background .2s}}
 @media (max-width:520px){h1{font-size:2rem}.prow{justify-content:center}}
 </style>
@@ -252,6 +261,7 @@ Acte I, scène 2</pre>
       <div class="status" role="status" aria-live="polite">
         <span id="st-text">Prêt. Touchez ▶ pour lancer la lecture.</span>
         <button class="btn primary sm" type="button" id="btn-go" hidden>Suite</button>
+        <button class="ib sm" type="button" id="btn-fold" aria-label="Réduire la barre" aria-expanded="true"></button>
       </div>
       <div class="prow">
         <div class="seg" id="seg-mask" role="group" aria-label="Mes répliques">
@@ -686,7 +696,16 @@ $('#btn-mine').addEventListener('click',function(){
   ui('Pas d’autre réplique à vous après celle-ci.');
 });
 $('#btn-prev').innerHTML=ICON.prev;$('#btn-next').innerHTML=ICON.next;$('#btn-mine').innerHTML=ICON.mine;$('#btn-play').innerHTML=ICON.play;
-
+function applyFold(){
+  var p=$('#player'),b=$('#btn-fold');
+  p.classList.toggle('folded',!!S.fold);
+  b.innerHTML=S.fold?svg('M7 14l5-5 5 5z'):svg('M7 10l5 5 5-5z');
+  b.setAttribute('aria-label',S.fold?'Agrandir la barre':'Réduire la barre');
+  b.setAttribute('aria-expanded',String(!S.fold));
+}
+$('#btn-fold').addEventListener('click',function(){S.fold=!S.fold;save();applyFold();});
+applyFold();
+   
 renderLib();show('home');
 })();
 </script>
