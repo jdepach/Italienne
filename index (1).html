@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#4338CA">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Italienne</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Concept : une page de travail. Bibliothèque -> lecteur avec feuilles de texte,
+   répliques au surligneur jaune, barre de lecture flottante en bas. */
+:root{
+  --bg:#EDEFF7; --surface:#FFFFFF; --paper:#FFFFFF; --ink:#1A1F36; --ink-2:#575E7D; --line:#D3D8EA;
+  --accent:#4338CA; --accent-ink:#FFFFFF; --hl:#FFE45C; --hl-ink:#1A1F36; --mask:rgba(26,31,54,.3);
+  --now:#E3E6FF; --danger:#B42318;
+  --font-display:'Bricolage Grotesque','Figtree',system-ui,sans-serif;
+  --font-ui:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-script:'Courier Prime','Courier New',Courier,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1220; --surface:#181C30; --paper:#1D2138; --ink:#E7E9F6; --ink-2:#A0A7C9; --line:#2D3252;
+    --accent:#9A9BFF; --accent-ink:#0F1220; --hl:#6A5A00; --hl-ink:#FFF6C2; --mask:rgba(255,255,255,.26);
+    --now:#272C55; --danger:#FF8A80; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1220; --surface:#181C30; --paper:#1D2138; --ink:#E7E9F6; --ink-2:#A0A7C9; --line:#2D3252;
+  --accent:#9A9BFF; --accent-ink:#0F1220; --hl:#6A5A00; --hl-ink:#FFF6C2; --mask:rgba(255,255,255,.26);
+  --now:#272C55; --danger:#FF8A80; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:16px;line-height:1.5;
+  padding-block:20px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#app{max-width:880px;margin:0 auto}
+h1,h2{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.1}
+h1{font-size:2.4rem;letter-spacing:-.02em}
+h2{font-size:1.5rem}
+p{margin:0}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hint{color:var(--ink-2);font-size:.9rem}
+.lbl{display:block;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+
+.btn{min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:.9rem}
+.btn.ghost{background:transparent}
+
+/* Bibliothèque */
+.top{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.top .sub{color:var(--ink-2);max-width:52ch}
+.lib{list-style:none;margin:20px 0 0;padding:0;border-top:1px solid var(--line)}
+.lib li{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+.lib .info{flex:1 1 220px;min-width:0}
+.lib .ttl{font-family:var(--font-display);font-size:1.2rem;font-weight:700;overflow-wrap:anywhere}
+.lib .meta{color:var(--ink-2);font-size:.9rem}
+.lib .meta mark{background:var(--hl);color:var(--hl-ink);padding:0 .3em}
+.lib .btns{display:flex;gap:8px;flex-wrap:wrap}
+.empty{padding:28px 0;color:var(--ink-2)}
+
+/* Import */
+.form{display:flex;flex-direction:column;gap:16px;max-width:720px}
+.form input[type=text],.form textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.form textarea{min-height:46vh;font-family:var(--font-script);font-size:.95rem;line-height:1.5;resize:vertical}
+.form .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sum{font-weight:600}
+.sum.warn{color:var(--danger)}
+details.fmt{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--surface)}
+details.fmt summary{cursor:pointer;font-weight:600}
+details.fmt pre{margin:10px 0 0;font:.85rem/1.5 var(--font-script);white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Lecteur */
+.rbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.rbar h2{flex:1;min-width:0;overflow-wrap:anywhere}
+.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px 24px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-bottom:20px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--bg);cursor:pointer;font-weight:600;font-size:.9rem}
+.chip small{color:var(--ink-2);font-weight:500;margin-left:4px}
+.chip[aria-pressed="true"]{background:var(--hl);color:var(--hl-ink);border-color:var(--hl)}
+.chip[aria-pressed="true"] small{color:inherit}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);max-width:100%}
+.seg button{min-height:40px;padding:0 12px;border:0;background:transparent;cursor:pointer;font-weight:600;font-size:.875rem}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tools .wide{grid-column:1/-1}
+.more{grid-column:1/-1}
+.more summary{cursor:pointer;font-weight:600}
+.more-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 24px;margin-top:12px}
+.more-body select{width:100%;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.more-body input[type=range]{width:100%;accent-color:var(--accent)}
+.more-body .full{grid-column:1/-1}
+.grow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:6px 0;border-top:1px solid var(--line)}
+.gname{flex:1 1 140px;min-width:0;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:.85rem;overflow-wrap:anywhere}
+
+/* Texte */
+.script{--scale:1}
+.script.pages{font-family:var(--font-script);font-size:calc(.95rem*var(--scale));line-height:1.6;display:flex;flex-direction:column;align-items:center;gap:20px}
+.page{width:100%;max-width:720px;aspect-ratio:1/1.414;background:var(--paper);border:1px solid var(--line);border-radius:3px;
+  box-shadow:0 1px 2px rgba(15,18,32,.08),0 14px 30px -18px rgba(15,18,32,.35);padding:clamp(18px,6vw,52px);display:flex;flex-direction:column;gap:1rem}
+.pn{margin-top:auto;padding-top:1rem;text-align:center;color:var(--ink-2);font-size:.75em;font-variant-numeric:tabular-nums}
+.flow{max-width:62ch;margin:0 auto;display:flex;flex-direction:column;gap:1.25rem;font-size:calc(1.05rem*var(--scale));line-height:1.6}
+.hd{margin:.4rem 0;text-align:center;text-transform:uppercase;letter-spacing:.14em;font-size:.85em;font-weight:700}
+.pages .hd{font-family:var(--font-script)}
+.flow .hd{font-family:var(--font-display);font-size:.95em}
+.dr{color:var(--ink-2);font-style:italic}
+.sp{position:relative;border-radius:8px}
+.sp.now{background:var(--now);margin:-.4em -.6em;padding:.4em .6em}
+.cue{display:flex;align-items:center;flex-wrap:wrap;gap:.5em}
+.who{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.85em}
+.sd{font-style:italic;color:var(--ink-2);font-size:.85em}
+.mine .who{background:var(--hl);color:var(--hl-ink);padding:0 .35em}
+.ph{width:30px;height:30px;margin-left:-6px;border:0;border-radius:50%;background:transparent;color:var(--ink-2);display:inline-grid;place-items:center;cursor:pointer;opacity:.6}
+.ph:hover{opacity:1;color:var(--accent)}
+.sp.now .who::after{content:" · en cours";text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-2)}
+.mine.now .who::after{color:var(--hl-ink)}
+.txt{margin-top:.15em;white-space:pre-line;line-height:1.85;overflow-wrap:anywhere}
+.flow .txt{font-family:var(--font-ui)}
+.hl{background:var(--hl);color:var(--hl-ink);box-decoration-break:clone;-webkit-box-decoration-break:clone;padding:.08em .3em;border-radius:2px}
+.mk{color:transparent;background:var(--mask);border-radius:3px;user-select:none;-webkit-user-select:none;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.covered .txt{cursor:pointer}
+.dir{font-style:italic;color:var(--ink-2)}
+.hl .dir{color:inherit;opacity:.75}
+.script .hint{text-align:center;padding:20px}
+
+/* Barre de lecture */
+.player{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));margin-top:24px;z-index:5;display:flex;flex-direction:column;gap:10px;
+  padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 10px 30px -12px rgba(15,18,32,.45)}
+.status{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;font-weight:600;font-size:.95rem}
+.status span{min-width:0;overflow-wrap:anywhere}
+.prow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.transport{display:flex;gap:6px;align-items:center}
+.ib{width:44px;height:44px;border:1px solid var(--line);border-radius:50%;background:var(--bg);cursor:pointer;display:grid;place-items:center}
+.ib.big{width:52px;height:52px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ib:hover{border-color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.sp.now{transition:background .2s}}
+@media (max-width:520px){h1{font-size:2rem}.prow{justify-content:center}}
+</style>
+
+</head>
+<body>
+<main id="app">
+  <section id="v-home">
+    <header class="top">
+      <h1>Italienne</h1>
+      <p class="sub">Répétez votre texte seul·e. L’appli lit les répliques des autres personnages et attend votre tour.</p>
+    </header>
+    <div><button id="btn-new" class="btn primary" type="button">+ Ajouter un texte</button></div>
+    <ul id="lib" class="lib"></ul>
+  </section>
+
+  <section id="v-import" hidden>
+    <header class="top"><h2 id="imp-h">Ajouter un texte</h2></header>
+    <form class="form" id="imp-form">
+      <div>
+        <label class="lbl" for="imp-title">Titre</label>
+        <input type="text" id="imp-title" placeholder="Ex. Le Malade imaginaire, acte II" autocomplete="off">
+      </div>
+      <div>
+        <label class="lbl" for="imp-text">Texte de la pièce</label>
+        <textarea id="imp-text" spellcheck="false" placeholder="SGANARELLE. Non, je te dis que je n’en veux rien faire…&#10;MARTINE. Et je te dis moi que je veux que tu vives à ma fantaisie…"></textarea>
+      </div>
+      <div class="row">
+        <label class="btn sm" for="imp-file">Charger un fichier .txt</label>
+        <input type="file" id="imp-file" accept=".txt,.md,text/plain" hidden>
+        <span class="hint">Pour un PDF, copiez le texte puis collez-le ci-dessus.</span>
+      </div>
+      <p class="sum" id="imp-sum" role="status"></p>
+      <details class="fmt">
+        <summary>Formats de répliques reconnus</summary>
+        <pre>NOM. Texte de la réplique
+NOM : Texte de la réplique
+NOM (à part). Texte de la réplique
+
+NOM
+Texte de la réplique sur la ligne suivante
+
+(Une indication de jeu entre parenthèses)
+Acte I, scène 2</pre>
+      </details>
+      <div class="row">
+        <button class="btn primary" type="submit" id="btn-imp-save">Enregistrer</button>
+        <button class="btn" type="button" id="btn-imp-cancel">Annuler</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="v-reader" hidden>
+    <div class="rbar">
+      <button class="btn sm" type="button" id="btn-back">← Mes textes</button>
+      <h2 id="r-title"></h2>
+    </div>
+    <div class="tools">
+      <div class="wide">
+        <span class="lbl" id="lbl-roles">Mon rôle</span>
+        <div class="chips" id="roles" role="group" aria-labelledby="lbl-roles"></div>
+      </div>
+      <div>
+        <span class="lbl" id="lbl-view">Affichage</span>
+        <div class="seg" id="seg-view" role="group" aria-labelledby="lbl-view">
+          <button type="button" data-v="pages">Pages</button>
+          <button type="button" data-v="flow">Lecture continue</button>
+        </div>
+      </div>
+      <div>
+        <span class="lbl" id="lbl-size">Taille du texte</span>
+        <div class="seg" role="group" aria-labelledby="lbl-size">
+          <button type="button" id="btn-sm" aria-label="Réduire le texte">A−</button>
+          <button type="button" id="btn-lg" aria-label="Agrandir le texte">A+</button>
+        </div>
+      </div>
+      <div class="wide">
+        <span class="lbl" id="lbl-my">Pendant la lecture, à mon tour</span>
+        <div class="seg" id="seg-my" role="group" aria-labelledby="lbl-my">
+          <button type="button" data-v="wait">J’attends mon signal</button>
+          <button type="button" data-v="gap">Silence, puis ça enchaîne</button>
+          <button type="button" data-v="read">Lire aussi mes répliques</button>
+        </div>
+      </div>
+      <details class="more">
+        <summary>Voix, vitesse et texte</summary>
+        <div class="more-body">
+          <div>
+            <label class="lbl" for="sel-voice">Voix des partenaires</label>
+            <select id="sel-voice"></select>
+          </div>
+          <div>
+            <label class="lbl" for="rng-rate">Vitesse <output id="out-rate"></output></label>
+            <input type="range" id="rng-rate" min="0.7" max="1.5" step="0.1">
+          </div>
+          <div class="full">
+            <span class="lbl" id="lbl-genders">Voix de chaque personnage</span>
+            <div id="genders" role="group" aria-labelledby="lbl-genders"></div>
+            <p class="hint">Les voix disponibles dépendent de votre appareil. Si aucune voix d’homme ou de femme n’est installée, l’appli change la hauteur de la voix.</p>
+          </div>
+          <div><button class="btn sm" type="button" id="btn-edit">Modifier le texte</button></div>
+          <p class="hint" id="no-tts" hidden>La lecture vocale n’est pas disponible dans ce navigateur. Vous pouvez quand même surligner et masquer vos répliques.</p>
+        </div>
+      </details>
+    </div>
+
+    <div id="script" class="script pages"></div>
+
+    <div class="player" id="player">
+      <div class="status" role="status" aria-live="polite">
+        <span id="st-text">Prêt. Touchez ▶ pour lancer la lecture.</span>
+        <button class="btn primary sm" type="button" id="btn-go" hidden>Suite</button>
+      </div>
+      <div class="prow">
+        <div class="seg" id="seg-mask" role="group" aria-label="Mes répliques">
+          <button type="button" data-v="visible">Visibles</button>
+          <button type="button" data-v="hint">Indice</button>
+          <button type="button" data-v="hidden">Masquées</button>
+        </div>
+        <div class="transport">
+          <button class="ib" type="button" id="btn-prev" aria-label="Réplique précédente" title="Réplique précédente"></button>
+          <button class="ib big" type="button" id="btn-play" aria-label="Lecture"></button>
+          <button class="ib" type="button" id="btn-next" aria-label="Réplique suivante" title="Réplique suivante"></button>
+          <button class="ib" type="button" id="btn-mine" aria-label="Aller à ma prochaine réplique" title="Ma prochaine réplique"></button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s);};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+var svg=function(d){return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="'+d+'" fill="currentColor"/></svg>';};
+var ICON={play:svg('M8 5v14l11-7z'),pause:svg('M7 5h4v14H7zM13 5h4v14h-4z'),prev:svg('M6 5h2v14H6zM20 5v14L9 12z'),next:svg('M16 5h2v14h-2zM4 5l11 7L4 19z'),mine:svg('M4 5l8 7-8 7zM12 5l8 7-8 7z'),here:'<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>'};
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Données ---------- */
+var KEY='italienne:v1';
+var store={scripts:[],settings:{view:'pages',mask:'visible',scale:1,rate:1,voice:'auto',myMode:'wait'}};
+var SAMPLE_TEXT=[
+"Acte I, scène 1",
+"(Sganarelle et Martine entrent en se querellant.)",
+"SGANARELLE. Non, je te dis que je n'en veux rien faire, et que c'est à moi de parler et d'être le maître.",
+"MARTINE. Et je te dis moi que je veux que tu vives à ma fantaisie, et que je ne me suis point mariée avec toi pour souffrir tes fredaines.",
+"SGANARELLE. Ô la grande fatigue que d'avoir une femme ! et qu'Aristote a bien raison quand il dit qu'une femme est pire qu'un démon !",
+"MARTINE. Voyez un peu l'habile homme avec son benêt d'Aristote !",
+"SGANARELLE. Oui, habile homme : trouve-moi un faiseur de fagots qui sache, comme moi, raisonner des choses, qui ait servi six ans un fameux médecin, et qui ait su dans sa jeunesse son rudiment par cœur.",
+"MARTINE. Peste du fou fieffé !",
+"SGANARELLE. Peste de la carogne !",
+"MARTINE. Maudit soit l'heure et le jour où je m'avisai d'aller dire oui !",
+"SGANARELLE. Maudit soit le bec cornu de notaire qui me fit signer ma ruine !",
+"MARTINE. C'est bien à toi vraiment à te plaindre de cette affaire. Devrais-tu être un seul moment sans rendre grâces au ciel de m'avoir pour ta femme ? Et méritais-tu d'épouser une personne comme moi ?",
+"SGANARELLE. Il est vrai que tu me fis trop d'honneur, et que j'eus lieu de me louer la première nuit de nos noces. Hé ! morbleu, ne me fais point parler là-dessus : je dirais de certaines choses...",
+"MARTINE. Quoi ? que dirais-tu ?",
+"SGANARELLE. Baste, laissons là ce discours. Il suffit que nous savons ce que nous savons, et que tu fus bien heureuse de me trouver.",
+"MARTINE. Qu'appelles-tu bien heureuse de te trouver ? Un homme qui me réduit à l'hôpital, un débauché, un traître, qui me mange tout ce que j'ai..."
+].join("\n");
+function uid(){return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function load(){
+  try{var r=localStorage.getItem(KEY);if(r){var d=JSON.parse(r);if(d&&Array.isArray(d.scripts)){store.scripts=d.scripts;Object.assign(store.settings,d.settings||{});return true;}}}catch(e){}
+  return false;
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(store));}catch(e){}}
+if(!load()){store.scripts=[{id:uid(),title:'Le Médecin malgré lui (extrait)',text:SAMPLE_TEXT,mine:['MARTINE'],sample:true}];save();}
+var S=store.settings;
+
+/* ---------- Analyse du texte ---------- */
+var NAME="[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ0-9'’ \\-]{0,30}";
+var reHead=/^\s*(acte|sc[èe]ne|tableau|prologue|[ée]pilogue|interm[èe]de)\b.*$/i;
+var reCue=new RegExp("^("+NAME+")(?:\\s*\\(([^)]*)\\)|\\s*,\\s*([^.:]{1,40}?))?\\s*[.:]\\s*(.*)$");
+var reCueMixed=/^([A-ZÀ-Ö][A-Za-zÀ-ÿ'’\-]*(?: [A-Za-zÀ-ÿ'’\-]+){0,2})\s*:\s*(\S.*)$/;
+var reAlone=new RegExp("^("+NAME+")(?:\\s*\\(([^)]*)\\))?\\s*$");
+function normName(n){return n.trim().replace(/\s+/g,' ').toUpperCase();}
+function matchCue(l){
+  var m=reCue.exec(l);
+  if(m)return {who:normName(m[1]),dir:(m[2]||m[3]||'').trim(),text:m[4]||''};
+  m=reCueMixed.exec(l);
+  if(m)return {who:normName(m[1]),dir:'',text:m[2]};
+  return null;
+}
+function parse(text){
+  var lines=String(text).replace(/\r/g,'').split('\n');
+  var blocks=[],curSp=null;
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i].trim();
+    if(!l)continue;
+    if(reHead.test(l)){blocks.push({t:'h',text:l});curSp=null;continue;}
+    if(/^\(.*\)$/.test(l)||/^\[.*\]$/.test(l)){blocks.push({t:'d',text:l.slice(1,-1).trim()});curSp=null;continue;}
+    var c=matchCue(l);
+    if(c){curSp={t:'s',who:c.who,dir:c.dir,lines:c.text?[c.text]:[]};blocks.push(curSp);continue;}
+    var a=reAlone.exec(l);
+    if(a&&/[A-ZÀ-ÖØ-Þ]{2}/.test(a[1])){
+      var j=i+1;while(j<lines.length&&!lines[j].trim())j++;
+      var nx=j<lines.length?lines[j].trim():'';
+      if(nx&&!reHead.test(nx)&&!matchCue(nx)){curSp={t:'s',who:normName(a[1]),dir:(a[2]||'').trim(),lines:[]};blocks.push(curSp);continue;}
+    }
+    if(curSp)curSp.lines.push(l);else blocks.push({t:'d',text:l});
+  }
+  var out=[],n=0,chars={},order=[];
+  blocks.forEach(function(b){
+    if(b.t==='s'){
+      b.text=b.lines.join('\n');
+      if(!b.text.trim())return;
+      b.n=n++;
+      if(!chars[b.who]){chars[b.who]=0;order.push(b.who);}
+      chars[b.who]++;
+    }
+    out.push(b);
+  });
+  return {blocks:out,count:n,chars:order.map(function(w){return {name:w,n:chars[w]};})};
+}
+
+/* ---------- Vues ---------- */
+var views={home:$('#v-home'),imp:$('#v-import'),reader:$('#v-reader')};
+function show(v){Object.keys(views).forEach(function(k){views[k].hidden=(k!==v);});window.scrollTo(0,0);}
+
+/* Bibliothèque */
+function renderLib(){
+  var ul=$('#lib');
+  if(!store.scripts.length){ul.innerHTML='<li class="empty">Aucun texte pour l’instant. Ajoutez la scène que vous devez apprendre.</li>';return;}
+  ul.innerHTML=store.scripts.map(function(s){
+    var p=parse(s.text);
+    var mine=(s.mine||[]).filter(function(m){return p.chars.some(function(c){return c.name===m;});});
+    var role=mine.length?'Rôle : <mark>'+esc(mine.join(', '))+'</mark>':'Rôle non choisi';
+    return '<li data-id="'+s.id+'"><div class="info"><div class="ttl">'+esc(s.title)+'</div><div class="meta">'+p.chars.length+' personnage'+(p.chars.length>1?'s':'')+' · '+p.count+' répliques · '+role+'</div></div>'+
+      '<div class="btns"><button class="btn primary sm" data-act="open" type="button">Répéter</button><button class="btn sm danger" data-act="del" type="button">Supprimer</button></div></li>';
+  }).join('');
+}
+$('#lib').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  var li=b.closest('li');var id=li.getAttribute('data-id');
+  if(b.dataset.act==='open')openScript(id);
+  if(b.dataset.act==='del'){
+    if(b.dataset.armed){store.scripts=store.scripts.filter(function(s){return s.id!==id;});save();renderLib();}
+    else{b.dataset.armed='1';b.textContent='Confirmer la suppression';}
+  }
+});
+
+/* Import / modification */
+var editingId=null;
+function openImport(id){
+  editingId=id||null;
+  var s=id?store.scripts.filter(function(x){return x.id===id;})[0]:null;
+  $('#imp-h').textContent=s?'Modifier le texte':'Ajouter un texte';
+  $('#imp-title').value=s?s.title:'';
+  $('#imp-text').value=s?s.text:'';
+  updateSum();show('imp');
+}
+function updateSum(){
+  var t=$('#imp-text').value,el=$('#imp-sum');
+  if(!t.trim()){el.textContent='';el.className='sum';return;}
+  var p=parse(t);
+  if(!p.count){el.textContent='Aucune réplique reconnue. Écrivez chaque réplique sous la forme « NOM. texte » ou « NOM : texte ».';el.className='sum warn';}
+  else{el.textContent=p.chars.length+' personnage'+(p.chars.length>1?'s':'')+' et '+p.count+' répliques reconnus : '+p.chars.map(function(c){return c.name;}).join(', ')+'.';el.className='sum';}
+}
+$('#btn-new').addEventListener('click',function(){openImport(null);});
+$('#imp-text').addEventListener('input',updateSum);
+$('#imp-file').addEventListener('change',function(e){
+  var f=e.target.files&&e.target.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){$('#imp-text').value=String(r.result||'');if(!$('#imp-title').value.trim())$('#imp-title').value=f.name.replace(/\.[^.]+$/,'');updateSum();};
+  r.readAsText(f,'utf-8');
+});
+$('#btn-imp-cancel').addEventListener('click',function(){if(editingId)openScript(editingId);else{renderLib();show('home');}});
+$('#imp-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  var text=$('#imp-text').value,title=$('#imp-title').value.trim()||'Texte sans titre';
+  if(!parse(text).count){updateSum();$('#imp-text').focus();return;}
+  var id=editingId;
+  if(id){var s=store.scripts.filter(function(x){return x.id===id;})[0];s.title=title;s.text=text;}
+  else{id=uid();store.scripts.unshift({id:id,title:title,text:text,mine:[]});}
+  save();openScript(id);
+});
+
+/* ---------- Lecteur ---------- */
+var cur=null,blocks=[],speeches=[],charList=[],revealed=new Set();
+function isMine(w){return cur.mine.indexOf(w)>-1;}
+function effMode(b){return revealed.has(b.n)?'visible':S.mask;}
+
+function txtHTML(b,mode){
+  var mine=isMine(b.who);
+  var out=b.text.split(/(\([^)]*\))/).map(function(p){
+    if(!p)return '';
+    if(p.charAt(0)==='('&&p.charAt(p.length-1)===')')return '<span class="dir">'+esc(p)+'</span>';
+    if(!mine||mode==='visible')return esc(p);
+    if(mode==='hint')return esc(p.replace(/[\p{L}\p{N}]+/gu,function(w){return w.charAt(0)+(w.length>1?'…':'');}));
+    return '<span class="mk">'+esc(p)+'</span>';
+  }).join('');
+  return mine?'<span class="hl">'+out+'</span>':out;
+}
+function spInner(b){
+  var mode=effMode(b),mine=isMine(b.who);
+  var cov=mine&&mode!=='visible';
+  var tx='<p class="txt"'+(mine&&S.mask!=='visible'?' tabindex="0" role="button" aria-label="Afficher ou masquer cette réplique"':'')+'>'+txtHTML(b,mode)+'</p>';
+  return {cls:'sp'+(mine?' mine':'')+(cov?' covered':'')+(P.cur===b.n?' now':''),
+    html:'<div class="cue"><button class="ph" type="button" data-act="here" aria-label="Lire à partir d’ici" title="Lire à partir d’ici">'+ICON.here+'</button><span class="who">'+esc(b.who)+'</span>'+(b.dir?'<span class="sd">('+esc(b.dir)+')</span>':'')+'</div>'+tx};
+}
+function renderBlock(b){
+  if(b.t==='h')return '<h3 class="hd">'+esc(b.text)+'</h3>';
+  if(b.t==='d')return '<p class="dr">'+esc(b.text)+'</p>';
+  var i=spInner(b);
+  return '<div class="'+i.cls+'" id="sp'+b.n+'" data-n="'+b.n+'">'+i.html+'</div>';
+}
+function paginate(bl){
+  var pages=[],page=[],used=0,BUDGET=30;
+  bl.forEach(function(b){
+    var u;
+    if(b.t==='h')u=4;
+    else if(b.t==='d')u=2+Math.ceil(b.text.length/56);
+    else u=2+b.text.split('\n').reduce(function(a,l){return a+Math.max(1,Math.ceil(l.length/54));},0);
+    if(page.length&&(used+u>BUDGET||(b.t==='h'&&used>BUDGET-9))){pages.push(page);page=[];used=0;}
+    page.push(b);used+=u;
+  });
+  if(page.length)pages.push(page);
+  return pages;
+}
+function renderScript(){
+  var el=$('#script');
+  el.className='script '+S.view;
+  el.style.setProperty('--scale',S.scale);
+  if(S.view==='pages'){
+    var pages=paginate(blocks);
+    el.innerHTML=pages.map(function(p,i){return '<article class="page" aria-label="Page '+(i+1)+'">'+p.map(renderBlock).join('')+'<footer class="pn">'+(i+1)+' / '+pages.length+'</footer></article>';}).join('');
+  }else{
+    el.innerHTML='<div class="flow">'+blocks.map(renderBlock).join('')+'</div>';
+  }
+}
+function refreshSp(n){
+  var b=speeches[n],el=$('#sp'+n);if(!b||!el)return;
+  var i=spInner(b);el.className=i.cls;el.innerHTML=i.html;
+}
+function renderRoles(){
+  var box=$('#roles');
+  box.innerHTML=charList.map(function(c){
+    return '<button type="button" class="chip" data-who="'+esc(c.name)+'" aria-pressed="'+isMine(c.name)+'">'+esc(c.name)+'<small>'+c.n+'</small></button>';
+  }).join('')+(cur.mine.length?'':'<p class="hint" style="flex-basis:100%">Touchez votre rôle pour surligner vos répliques.</p>');
+}
+$('#roles').addEventListener('click',function(e){
+  var b=e.target.closest('.chip');if(!b)return;
+  var w=b.getAttribute('data-who'),i=cur.mine.indexOf(w);
+  if(i>-1)cur.mine.splice(i,1);else cur.mine.push(w);
+  save();revealed.clear();renderRoles();renderScript();ui();
+});
+function setSeg(id,val){document.querySelectorAll(id+' button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.v===val));});}
+function openScript(id){
+  var s=store.scripts.filter(function(x){return x.id===id;})[0];if(!s)return;
+  stopAll();
+  cur=s;
+  var p=parse(s.text);
+  blocks=p.blocks;charList=p.chars;
+  speeches=blocks.filter(function(b){return b.t==='s';});
+  cur.mine=(cur.mine||[]).filter(function(m){return charList.some(function(c){return c.name===m;});});
+  revealed.clear();P.cur=-1;
+  $('#r-title').textContent=s.title;
+  setSeg('#seg-view',S.view);setSeg('#seg-mask',S.mask);setSeg('#seg-my',S.myMode);
+  renderRoles();renderScript();fillVoices();renderGenders();ui();show('reader');
+}
+$('#btn-back').addEventListener('click',function(){stopAll();renderLib();show('home');});
+$('#btn-edit').addEventListener('click',function(){stopAll();openImport(cur.id);});
+
+$('#seg-view').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  S.view=b.dataset.v;save();setSeg('#seg-view',S.view);renderScript();
+  if(P.cur>-1)markNow(true);
+});
+$('#seg-mask').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  S.mask=b.dataset.v;save();revealed.clear();setSeg('#seg-mask',S.mask);renderScript();
+});
+$('#seg-my').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  S.myMode=b.dataset.v;save();setSeg('#seg-my',S.myMode);ui();
+});
+var SCALES=[0.85,1,1.15,1.3,1.5];
+function stepScale(d){
+  var i=SCALES.indexOf(S.scale);if(i<0)i=1;
+  i=Math.max(0,Math.min(SCALES.length-1,i+d));
+  S.scale=SCALES[i];save();$('#script').style.setProperty('--scale',S.scale);
+}
+$('#btn-sm').addEventListener('click',function(){stepScale(-1);});
+$('#btn-lg').addEventListener('click',function(){stepScale(1);});
+
+/* Clic sur une réplique : lire d'ici / révéler */
+function toggleReveal(n){
+  if(S.mask==='visible')return;
+  if(revealed.has(n))revealed.delete(n);else revealed.add(n);
+  refreshSp(n);
+}
+$('#script').addEventListener('click',function(e){
+  var sp=e.target.closest('.sp');if(!sp)return;
+  var n=+sp.dataset.n;
+  if(e.target.closest('.ph')){P.on=true;goTo(n,true);return;}
+  if(e.target.closest('.txt')&&isMine(speeches[n].who))toggleReveal(n);
+});
+$('#script').addEventListener('keydown',function(e){
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  var t=e.target.closest('.txt');if(!t)return;
+  var sp=t.closest('.sp');if(!sp||!isMine(speeches[+sp.dataset.n].who))return;
+  e.preventDefault();var n=+sp.dataset.n;toggleReveal(n);
+  var again=$('#sp'+n+' .txt');if(again)again.focus();
+});
+
+/* ---------- Lecture vocale ---------- */
+var P={on:false,cur:-1,wait:false,tok:0,timer:null};
+function synthOK(){return 'speechSynthesis' in window&&typeof SpeechSynthesisUtterance!=='undefined';}
+function frVoices(){
+  if(!synthOK())return [];
+  var all=speechSynthesis.getVoices();
+  var fr=all.filter(function(v){return /^fr/i.test(v.lang);});
+  return fr.length?fr:all;
+}
+function fillVoices(){
+  var sel=$('#sel-voice');
+  var vs=frVoices();
+  sel.innerHTML='<option value="auto">Automatique (voix variées)</option>'+vs.map(function(v){return '<option value="'+esc(v.voiceURI)+'">'+esc(v.name)+' ('+esc(v.lang)+')</option>';}).join('');
+  sel.value=vs.some(function(v){return v.voiceURI===S.voice;})?S.voice:'auto';
+  $('#rng-rate').value=S.rate;$('#out-rate').textContent=String(S.rate).replace('.',',')+'×';
+  $('#no-tts').hidden=synthOK();
+}
+if(synthOK())speechSynthesis.addEventListener('voiceschanged',fillVoices);
+$('#sel-voice').addEventListener('change',function(e){S.voice=e.target.value;save();});
+$('#rng-rate').addEventListener('input',function(e){S.rate=+e.target.value;$('#out-rate').textContent=String(S.rate).replace('.',',')+'×';save();});
+
+var FEM=/am[ée]lie|audrey|aur[ée]lie|marie|julie|denise|[ée]loise|brigitte|c[ée]line|hortense|l[ée]a\b|virginie|female|femme|f[ée]minin|google fran[cç]ais|chantal|claire|sylvie|lucie|paulina/i;
+var MAS=/thomas|henri|paul|claude|antoine|nicolas|mathieu|r[ée]my|yves|jean|male|homme|masculin|daniel|bernard|guillaume/i;
+function voiceGender(v){var n=v.name;if(FEM.test(n))return 'f';if(MAS.test(n))return 'm';return null;}
+function renderGenders(){
+  var g=cur.genders||{};
+  $('#genders').innerHTML=charList.map(function(c){
+    var v=g[c.name]||'';
+    function b(val,label){return '<button type="button" data-g="'+val+'" aria-pressed="'+(v===val)+'">'+label+'</button>';}
+    return '<div class="grow" data-who="'+esc(c.name)+'"><span class="gname">'+esc(c.name)+'</span><div class="seg">'+b('','Auto')+b('f','Femme')+b('m','Homme')+'</div><button type="button" class="btn sm ghost" data-test="1">Écouter</button></div>';
+  }).join('');
+}
+$('#genders').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  var row=b.closest('.grow'),w=row.getAttribute('data-who');
+  if(b.dataset.test){
+    stopAll();ui();
+    setTimeout(function(){speakText({who:w,text:'Bonjour, voici ma voix.'},function(){});},40);
+    return;
+  }
+  cur.genders=cur.genders||{};
+  if(b.dataset.g)cur.genders[w]=b.dataset.g;else delete cur.genders[w];
+  save();renderGenders();
+});
+function voiceFor(who){
+  var vs=frVoices(),idx=Math.max(0,charList.findIndex(function(c){return c.name===who;}));
+  var gm=cur.genders||{},g=gm[who];
+  if(g&&vs.length){
+    var pool=vs.filter(function(v){return voiceGender(v)===g;});
+    var same=charList.filter(function(c){return gm[c.name]===g;}).map(function(c){return c.name;});
+    var gi=Math.max(0,same.indexOf(who));
+    if(pool.length)return {v:pool[gi%pool.length],pitch:gi%2?(g==='f'?1.1:0.9):1};
+    return {v:vs[gi%vs.length],pitch:g==='f'?1.3:0.75};
+  }
+  var pitches=[1,0.8,1.2,0.9,1.1];
+  var v=null;
+  if(vs.length){
+    if(S.voice!=='auto')v=vs.filter(function(x){return x.voiceURI===S.voice;})[0]||null;
+    if(!v)v=vs[idx%vs.length];
+  }
+  return {v:v,pitch:pitches[idx%pitches.length]};
+}
+function speakText(sp,done){
+  var tok=P.tok;
+  var clean=sp.text.replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();
+  if(!clean||!synthOK()){
+    P.timer=setTimeout(function(){if(tok===P.tok)done();},clean?Math.min(8000,clean.split(' ').length*380/S.rate):300);
+    return;
+  }
+  var sentences=clean.match(/[^.!?…;:]+[.!?…;:]*\s*/g)||[clean];
+  var chunks=[],acc='';
+  sentences.forEach(function(s){if(acc&&(acc+s).length>180){chunks.push(acc);acc=s;}else acc+=s;});
+  if(acc)chunks.push(acc);
+  var vp=voiceFor(sp.who),k=0;
+  (function step(){
+    if(tok!==P.tok)return;
+    if(k>=chunks.length){done();return;}
+    var u=new SpeechSynthesisUtterance(chunks[k++].trim());
+    u.lang='fr-FR';if(vp.v)u.voice=vp.v;u.rate=S.rate;u.pitch=vp.pitch;
+    u.onend=step;
+    u.onerror=function(){if(tok===P.tok)step();};
+    speechSynthesis.speak(u);
+  })();
+}
+function gapMs(sp){return Math.max(1500,sp.text.split(/\s+/).length*420/S.rate);}
+function markNow(scroll){
+  document.querySelectorAll('.sp.now').forEach(function(e){e.classList.remove('now');});
+  var el=P.cur>-1?$('#sp'+P.cur):null;
+  if(el){el.classList.add('now');if(scroll)el.scrollIntoView({block:'center',behavior:reduce?'auto':'smooth'});}
+}
+function goTo(i,speak){
+  if(i<0||i>=speeches.length)return;
+  clearTimeout(P.timer);P.tok++;
+  if(synthOK())speechSynthesis.cancel();
+  P.wait=false;P.cur=i;markNow(true);
+  var sp=speeches[i],tok=P.tok;
+  if(!speak){ui();return;}
+  if(isMine(sp.who)&&S.myMode!=='read'){
+    if(S.myMode==='wait')P.wait=true;
+    else P.timer=setTimeout(function(){if(tok===P.tok&&P.on)advance();},gapMs(sp));
+    ui();return;
+  }
+  ui();
+  setTimeout(function(){if(tok===P.tok)speakText(sp,function(){if(tok===P.tok&&P.on)advance();});},40);
+}
+function advance(){
+  if(P.cur+1<speeches.length)goTo(P.cur+1,true);
+  else{stopAll();ui('Fin du texte.');}
+}
+function stopAll(){
+  P.on=false;P.wait=false;P.tok++;clearTimeout(P.timer);
+  if(synthOK())speechSynthesis.cancel();
+}
+function ui(msg){
+  var st=$('#st-text'),go=$('#btn-go');
+  var sp=P.cur>-1?speeches[P.cur]:null;
+  var txt;
+  if(msg)txt=msg;
+  else if(!speeches.length)txt='';
+  else if(!P.on)txt=sp?'En pause · '+sp.who:'Prêt. Touchez ▶ pour lancer la lecture.';
+  else if(P.wait)txt='À vous : '+sp.who;
+  else if(isMine(sp.who)&&S.myMode==='gap')txt='À vous : '+sp.who+' (le texte enchaîne dans un instant)';
+  else txt=sp.who+' parle…';
+  st.textContent=txt;
+  go.hidden=!(P.on&&P.wait);
+  var pl=$('#btn-play');
+  pl.innerHTML=P.on?ICON.pause:ICON.play;
+  pl.setAttribute('aria-label',P.on?'Pause':'Lecture');
+}
+$('#btn-play').addEventListener('click',function(){
+  if(P.on){stopAll();ui();return;}
+  P.on=true;goTo(P.cur<0?0:P.cur,true);
+});
+$('#btn-go').addEventListener('click',function(){if(P.on&&P.wait)advance();});
+$('#btn-next').addEventListener('click',function(){goTo(Math.min(speeches.length-1,P.cur+1),P.on);});
+$('#btn-prev').addEventListener('click',function(){goTo(Math.max(0,P.cur-1),P.on);});
+$('#btn-mine').addEventListener('click',function(){
+  for(var j=P.cur+1;j<speeches.length;j++){if(isMine(speeches[j].who)){goTo(j,P.on);return;}}
+  ui('Pas d’autre réplique à vous après celle-ci.');
+});
+$('#btn-prev').innerHTML=ICON.prev;$('#btn-next').innerHTML=ICON.next;$('#btn-mine').innerHTML=ICON.mine;$('#btn-play').innerHTML=ICON.play;
+
+renderLib();show('home');
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}
+</script>
+</body>
+</html>
