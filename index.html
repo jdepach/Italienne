@@ -573,6 +573,29 @@ function fillVoices(){
   $('#no-tts').hidden=synthOK();
 }
 if(synthOK())speechSynthesis.addEventListener('voiceschanged',fillVoices);
+  function hintText(p,st){
+  return p.split(/([.!?…]+\s*)/).map(function(seg,i){
+    if(i%2){st.start=true;return '';}
+    if(!seg.trim())return '';
+    if(st.start){
+      st.start=false;
+      var m=/^[^\p{L}\p{N}]*([\p{L}\p{N}’'\-]+)/u.exec(seg);
+      return m?esc(m[1])+' … ':'';
+    }
+    return '';
+  }).join('').replace(/ $/,'');
+}
+function txtHTML(b,mode){
+  var mine=isMine(b.who),st={start:true};
+  var out=b.text.split(/(\([^)]*\))/).map(function(p){
+    if(!p)return '';
+    if(p.charAt(0)==='('&&p.charAt(p.length-1)===')')return '<span class="dir">'+esc(p)+'</span>';
+    if(!mine||mode==='visible')return esc(p);
+    if(mode==='hint')return hintText(p,st);
+    return '<span class="mk">'+esc(p)+'</span>';
+  }).join('');
+  return mine?'<span class="hl">'+out+'</span>':out;
+} 
 $('#sel-voice').addEventListener('change',function(e){S.voice=e.target.value;save();});
 $('#rng-rate').addEventListener('input',function(e){S.rate=+e.target.value;$('#out-rate').textContent=String(S.rate).replace('.',',')+'×';save();});
 
