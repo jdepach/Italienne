@@ -730,6 +730,27 @@ $('#btn-fold').addEventListener('click',function(){S.fold=!S.fold;save();applyFo
 applyFold();
    
 renderLib();show('home');
+function hintText(p,st){
+  var re=/([\p{L}\p{N}]+(?:[’'\-][\p{L}\p{N}]+)*)|(\s+)|([^\p{L}\p{N}\s])/gu,m,items=[];
+  while((m=re.exec(p))){
+    if(m[1]){items.push({k:st.start?'v':'m',t:m[1]});st.start=false;}
+    else if(m[2])items.push({k:'s',t:m[2]});
+    else{items.push({k:'v',t:m[3]});if(/[.!?…]/.test(m[3]))st.start=true;}
+  }
+  items.forEach(function(it,i){
+    if(it.k!=='s')return;
+    var a=items[i-1],b=items[i+1];
+    it.k=(a&&b&&a.k==='m'&&b.k==='m')?'m':'v';
+  });
+  var out='',run='';
+  items.forEach(function(it){
+    if(it.k==='m'){run+=it.t;return;}
+    if(run){out+='<span class="mk">'+esc(run)+'</span>';run='';}
+    out+=esc(it.t);
+  });
+  if(run)out+='<span class="mk">'+esc(run)+'</span>';
+  return out;
+}
 })();
 </script>
 
